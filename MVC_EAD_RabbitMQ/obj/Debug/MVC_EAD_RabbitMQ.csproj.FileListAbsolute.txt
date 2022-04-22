@@ -102,3 +102,4 @@ F:\HocWeb\MVC\Bt_MVC\MVC_EAD_RabbitMQ\MVC_EAD_RabbitMQ\obj\Debug\MVC_EAD_RabbitM
 F:\HocWeb\MVC\Bt_MVC\MVC_EAD_RabbitMQ\MVC_EAD_RabbitMQ\obj\Debug\MVC_EAD_RabbitMQ.Migrations.AddFirstTable.resources
 F:\HocWeb\MVC\Bt_MVC\MVC_EAD_RabbitMQ\MVC_EAD_RabbitMQ\obj\Debug\MVC_EAD_RabbitMQ.csproj.GenerateResource.cache
 F:\HocWeb\MVC\Bt_MVC\MVC_EAD_RabbitMQ\MVC_EAD_RabbitMQ\obj\Debug\MVC_EAD_RabbitMQ.Migrations.AddTableArticle.resources
+F:\HocWeb\MVC\Bt_MVC\MVC_EAD_RabbitMQ\MVC_EAD_RabbitMQ\obj\Debug\MVC_EAD_RabbitMQ.Migrations.UpdateArticleId.resources

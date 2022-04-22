@@ -158,6 +158,7 @@
     <Compile Include="Controllers\HomeController.cs" />
     <Compile Include="Controllers\SourcesController.cs" />
     <Compile Include="Data\RabbitContext.cs" />
+    <Compile Include="Data\RabbitMQBll.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
@@ -168,6 +169,10 @@
     <Compile Include="Migrations\202204200624318_AddTableArticle.cs" />
     <Compile Include="Migrations\202204200624318_AddTableArticle.Designer.cs">
       <DependentUpon>202204200624318_AddTableArticle.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\202204201120500_UpdateArticleId.cs" />
+    <Compile Include="Migrations\202204201120500_UpdateArticleId.Designer.cs">
+      <DependentUpon>202204201120500_UpdateArticleId.cs</DependentUpon>
     </Compile>
     <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="Models\Article.cs" />
@@ -251,6 +256,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Migrations\202204200624318_AddTableArticle.resx">
       <DependentUpon>202204200624318_AddTableArticle.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202204201120500_UpdateArticleId.resx">
+      <DependentUpon>202204201120500_UpdateArticleId.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <PropertyGroup>

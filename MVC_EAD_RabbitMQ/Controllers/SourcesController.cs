@@ -21,6 +21,9 @@ namespace MVC_EAD_RabbitMQ.Controllers
     {
         public static HashSet<Content> setLink;
         private RabbitContext db = new RabbitContext();
+        private static string getSelectorTitle;
+        private static string getSelectorDescription;
+        private static string getSelectorImage;
 
         // GET: Sources
         public ActionResult Index()
@@ -107,12 +110,8 @@ namespace MVC_EAD_RabbitMQ.Controllers
                             UrlSource = link,
                             LinkSelector = content.LinkSelector
                         };
-                        if (sourceLink == null) // nếu link này null
-                        {
-                            continue;
-                        }
-
-                        setLink.Add(sourceLink);
+                        
+                        setLink.Add(sourceLink);  
                     }
                     
                     return PartialView("ListLink", setLink);
@@ -134,12 +133,16 @@ namespace MVC_EAD_RabbitMQ.Controllers
             {
                 try
                 {
+                    getSelectorTitle = content.Title;
+                    getSelectorDescription = content.Description;
+                    getSelectorImage = content.Image;
+
                     var web = new HtmlWeb();
                     HtmlDocument doc = web.Load(content.UrlArticle); // Lấy nội dung bên trong link đó
                     var title = doc.QuerySelector(content.Title).InnerHtml; // tìm đến những h1 có class= title-detail
                     var description = doc.QuerySelector(content.Description).InnerHtml;
                     var image = doc.QuerySelector(content.Image).Attributes["src"].Value;
-
+                    
 
                     var article = new Article()
                     {
@@ -162,97 +165,98 @@ namespace MVC_EAD_RabbitMQ.Controllers
 
         public ActionResult SaveLink()
         {
-            QueueSend();
-            QueueReceived();
+            // Cách vừa sửa vẫn chưa tối ưu vì vẫn lưu chậm
+            //1. Tạo kết nối
+            RabbitMQBll obj = new RabbitMQBll();
+            IConnection cnn = obj.GetConnection();
 
-            return View("Index", db.Source.ToList());
-        }
-
-        public void QueueSend()
-        {
-            var factory = new ConnectionFactory() { HostName = "localhost" };
-            using (var connection = factory.CreateConnection())
-            using (var channel = connection.CreateModel())
+            //2. Gửi lên database phần link
+            // 2.1 Phần source
+            try
             {
-                channel.QueueDeclare(queue: "task_queue ",
-                                durable: true,
-                                exclusive: false,
-                                autoDelete: false,
-                                arguments: null);
-
-
-                foreach (var link in setLink)
+                bool flag1 = obj.send(cnn, JsonConvert.SerializeObject(setLink), "task_queue");
+                if (flag1)
                 {
-                    var source = new Source()
+                    string JsonRecived = obj.receive(cnn, "task_queue");
+                    HashSet<Content> convertToHashSet = JsonConvert.DeserializeObject<HashSet<Content>>(JsonRecived);
+                    foreach (var link in convertToHashSet)
                     {
-                        Url = link.UrlSource,
-                        LinkSelector = link.LinkSelector,
-                    };
+                        var source = new Source()
+                        {
+                            Url = link.UrlSource,
+                            LinkSelector = link.LinkSelector,
+                        };
 
-                    try
-                    {
                         db.Source.Add(source);
                         db.SaveChanges();
-                    }
-                    catch (Exception e)
-                    {
-                        Debug.WriteLine("Error: " + e.Message);
-                    }
-                    var body = Encoding.UTF8.GetBytes(link.UrlSource);
 
-                    channel.BasicPublish(exchange: "",
-                                            routingKey: "task_queue",
-                                            basicProperties: null,
-                                            body: body);
-                }
-            }
-        }
-
-        public void QueueReceived()
-        {
-            var factory = new ConnectionFactory() { HostName = "localhost" };
-            using (var connection = factory.CreateConnection())
-            using (var channel = connection.CreateModel())
-            {
-                try
-                {
-                    channel.QueueDeclare(queue: "task_queue ",
-                                        durable: true,
-                                        exclusive: false,
-                                        autoDelete: false,
-                                        arguments: null);
-
-                    var consumer = new EventingBasicConsumer(channel);
-
-                    consumer.Received += (sender, ea) =>
-                    {
-                        var body = ea.Body.ToArray();
-                        var link = Encoding.UTF8.GetString(body);
+                        // 2.2 Phần Article
                         var web = new HtmlWeb();
-                        HtmlDocument doc = web.Load(link); // Lấy nội dung bên trong link đó
-                        string title = doc.QuerySelector("h1.title-detail").InnerHtml ?? null; // tìm đến những h1 có class= title-detail
-                        string description = doc.QuerySelector("p.description").InnerHtml ?? null;
-                        string image = doc.QuerySelector("img").Attributes["src"].Value ?? null;
+                        HtmlDocument doc = web.Load(link.UrlSource); // Lấy nội dung bên trong link đó
+                        string title = doc.QuerySelector(getSelectorTitle).InnerHtml; // tìm đến những h1 có class= title-detail
+                        string description = doc.QuerySelector(getSelectorDescription).InnerHtml;
+                        string image = doc.QuerySelector(getSelectorImage).Attributes["src"].Value;
 
                         var article = new Article()
                         {
-                            Url = link,
+                            Url = link.UrlSource,
                             Title = title,
                             Description = description,
                             Image = image,
                         };
                         db.Article.Add(article);
                         db.SaveChanges();
-                    };
-                    channel.BasicConsume(queue: "task_queue",
-                                            autoAck: true,
-                                            consumer: consumer);
+                    }
                 }
-                catch (Exception e)
-                {
-                    Debug.WriteLine("Error: " + e.Message);
-                }
+
+                // Cách code cũ lưu chậm
+                //foreach (var link in setLink)
+                //{
+                //    var source = new Source()
+                //    {
+                //        Url = link.UrlSource,
+                //        LinkSelector = link.LinkSelector,
+                //    };
+
+                //    bool flag1 = obj.send(cnn, JsonConvert.SerializeObject(source), "task_queue");
+                //    if (flag1)
+                //    {
+                //        string JsonRecived = obj.receive(cnn, "task_queue");
+                //        Source convertToSource = JsonConvert.DeserializeObject<Source>(JsonRecived);
+                //        db.Source.Add(convertToSource);
+                //        db.SaveChanges();
+                //    }
+
+                //    // 2.2 Phần Article
+                //    var web = new HtmlWeb();
+                //    HtmlDocument doc = web.Load(link.UrlSource); // Lấy nội dung bên trong link đó
+                //    string title = doc.QuerySelector(getSelectorTitle).InnerHtml; // tìm đến những h1 có class= title-detail
+                //    string description = doc.QuerySelector(getSelectorDescription).InnerHtml;
+                //    string image = doc.QuerySelector(getSelectorImage).Attributes["src"].Value;
+
+                //    var article = new Article()
+                //    {
+                //        Url = link.UrlSource,
+                //        Title = title,
+                //        Description = description,
+                //        Image = image,
+                //    };
+                //    bool flag2 = obj.send(cnn, JsonConvert.SerializeObject(article), "task_queue");
+                //    if (flag2)
+                //    {
+                //        string JsonRecived = obj.receive(cnn, "task_queue");
+                //        Article convertToArticle = JsonConvert.DeserializeObject<Article>(JsonRecived);
+                //        db.Article.Add(convertToArticle);
+                //        db.SaveChanges();
+                //    }
+                //}
             }
+            catch (Exception e)
+            {
+                Debug.WriteLine("Error: " + e.Message);
+            }
+
+            return View("Index", db.Source.ToList());
         }
 
         // GET: Sources/Edit/5

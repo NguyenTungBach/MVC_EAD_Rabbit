@@ -19,7 +19,7 @@ namespace MVC_EAD_RabbitMQ.Controllers
     public class ArticlesController : Controller
     {
         private RabbitContext db = new RabbitContext();
-
+        
         // GET: Articles
         public ActionResult Index()
         {
